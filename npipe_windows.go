@@ -9,6 +9,7 @@ package npipe
 //sys cancelIoEx(handle syscall.Handle, overlapped *syscall.Overlapped) (err error) = CancelIoEx
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -460,7 +461,21 @@ func (c *PipeConn) Write(b []byte) (int, error) {
 
 // Close closes the connection.
 func (c *PipeConn) Close() error {
-	return syscall.CloseHandle(c.handle)
+	// check whether the handle is valid
+	if c.handle == 0 {
+		return errors.New("handle is already closed")
+	}
+
+	// attempt to close the handle
+	err := syscall.CloseHandle(c.handle)
+	if err != nil {
+		return fmt.Errorf("failed to close handle: %w", err)
+	}
+
+	// empty handles to avoid repeated closures
+	c.handle = 0
+
+	return nil
 }
 
 // LocalAddr returns the local network address.
